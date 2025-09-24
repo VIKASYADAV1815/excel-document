@@ -1,0 +1,1537 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Vision Project - Beginner Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-jsx.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css" rel="stylesheet" />
+    <style>
+        body {
+            background-color: #374151; /* Tailwind gray-700 */
+            color: #d1d5db;
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+        }
+        pre[class*="language-"] {
+            background-color: #000000 !important; /* Black background for code blocks */
+            border-radius: 0.5rem;
+            padding: 1rem;
+            font-size: 0.9rem;
+        }
+        .table-of-contents a {
+            transition: color 0.2s ease;
+        }
+        .table-of-contents a:hover {
+            color: #60a5fa;
+        }
+        .scrollspy {
+            position: sticky;
+            top: 1rem;
+        }
+        .code-block {
+            margin: 1rem 0;
+            border-left: 4px solid #60a5fa;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Main Content -->
+            <div class="lg:w-3/4">
+                <h1 class="text-4xl font-bold text-white mb-6">Excel Vision Project - Complete Beginner Guide</h1>
+                
+                <!-- Table of Contents -->
+                <div class="mb-8 p-4 bg-gray-800 rounded-lg">
+                    <h2 class="text-2xl font-semibold text-white mb-4">Table of Contents</h2>
+                    <ul class="table-of-contents list-disc list-inside text-gray-300 space-y-2">
+                        <li><a href="#project-overview" class="hover:underline">Project Overview</a></li>
+                        <li><a href="#prerequisites" class="hover:underline">Prerequisites</a></li>
+                        <li><a href="#installation-guide" class="hover:underline">Installation Guide</a></li>
+                        <li><a href="#project-structure" class="hover:underline">Project Structure</a></li>
+                        <li><a href="#backend-explanation" class="hover:underline">Backend Explanation</a></li>
+                        <li><a href="#frontend-explanation" class="hover:underline">Frontend Explanation</a></li>
+                        <li><a href="#features" class="hover:underline">Features</a></li>
+                        <li><a href="#code-explanation" class="hover:underline">Code Explanation</a></li>
+                        <li><a href="#troubleshooting" class="hover:underline">Troubleshooting</a></li>
+                        <li><a href="#future-enhancements" class="hover:underline">Future Enhancements</a></li>
+                    </ul>
+                </div>
+
+                <!-- Project Overview -->
+                <section id="project-overview" class="mb-8">
+                    <h2 class="text-3xl font-semibold text-white mb-4">Project Overview</h2>
+                    <p>This is a full-stack MERN (MongoDB, Express.js, React.js, Node.js) application named Excel Vision, designed with a dark gray theme and colorful code syntax highlighting similar to VS Code. It allows users to upload Excel files and generate various types of charts from the data.</p>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">Key Features:</h3>
+                    <ul class="list-disc list-inside text-gray-300 space-y-1">
+                        <li>Excel file upload</li>
+                        <li>Multiple chart types (Bar, Line, Pie, 3D charts, etc.)</li>
+                        <li>Chart download as PNG/PDF</li>
+                        <li>User authentication</li>
+                        <li>History management</li>
+                    </ul>
+                </section>
+
+                <!-- Prerequisites -->
+                <section id="prerequisites" class="mb-8">
+                    <h2 class="text-3xl font-semibold text-white mb-4">Prerequisites</h2>
+                    <h3 class="text-xl font-semibold text-gray-200">Software Requirements:</h3>
+                    <ul class="list-disc list-inside text-gray-300 space-y-1">
+                        <li><strong>Node.js (v16 or higher):</strong> Download from <a href="https://nodejs.org/" class="text-blue-400 hover:underline">https://nodejs.org/</a><br>Installation check: <code class="bg-gray-700 px-1 rounded">node --version</code></li>
+                        <li><strong>MongoDB:</strong> Local installation or MongoDB Atlas (cloud)<br>Download from <a href="https://www.mongodb.com/" class="text-blue-400 hover:underline">https://www.mongodb.com/</a></li>
+                        <li><strong>Git:</strong> For version control<br>Download from <a href="https://git-scm.com/" class="text-blue-400 hover:underline">https://git-scm.com/</a></li>
+                        <li><strong>Code Editor:</strong> VS Code (recommended)<br>Download from <a href="https://code.visualstudio.com/" class="text-blue-400 hover:underline">https://code.visualstudio.com/</a></li>
+                    </ul>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">Knowledge Requirements:</h3>
+                    <ul class="list-disc list-inside text-gray-300 space-y-1">
+                        <li>Basic JavaScript</li>
+                        <li>HTML/CSS fundamentals</li>
+                        <li>React.js basics</li>
+                        <li>Understanding of Node.js and Express.js</li>
+                    </ul>
+                </section>
+
+                <!-- Installation Guide -->
+                <section id="installation-guide" class="mb-8">
+                    <h2 class="text-3xl font-semibold text-white mb-4">Installation Guide</h2>
+                    <h3 class="text-xl font-semibold text-gray-200">Step 1: Project Setup</h3>
+                    <div class="code-block">
+                        <pre><code class="language-bash">
+# Clone the repository
+git clone &lt;your-repo-url&gt;
+cd excel-vision
+                        </code></pre>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">Step 2: Backend Setup</h3>
+                    <div class="code-block">
+                        <pre><code class="language-bash">
+# Navigate to backend folder
+cd backend
+
+# Install dependencies
+npm install
+
+# Create .env file
+# Add the following variables:
+MONGO_URI=mongodb://localhost:27017/excel-vision-db
+JWT_SECRET=your-secret-key
+PORT=5000
+
+# Start backend server
+npm start
+                        </code></pre>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">Step 3: Frontend Setup</h3>
+                    <div class="code-block">
+                        <pre><code class="language-bash">
+# Open a new terminal
+# Navigate to frontend folder
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start frontend server
+npm run dev
+                        </code></pre>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">Step 4: Access Application</h3>
+                    <ul class="list-disc list-inside text-gray-300 space-y-1">
+                        <li>Frontend: <a href="http://localhost:5173/" class="text-blue-400 hover:underline">http://localhost:5173/</a></li>
+                        <li>Backend API: <a href="http://localhost:5000/" class="text-blue-400 hover:underline">http://localhost:5000/</a></li>
+                    </ul>
+                </section>
+
+                <!-- Project Structure -->
+                <section id="project-structure" class="mb-8">
+                    <h2 class="text-3xl font-semibold text-white mb-4">Project Structure</h2>
+                    <div class="code-block">
+                        <pre><code class="language-text">
+excel-vision/
+├── backend/                 # Server-side code
+│   ├── models/             # Database models
+│   ├── routes/             # API routes
+│   ├── middleware/         # Custom middleware
+│   ├── uploads/            # Uploaded files
+│   ├── app.js             # Express app configuration
+│   ├── server.js          # Server entry point
+│   └── .env               # Environment variables
+├── frontend/               # Client-side code
+│   ├── src/
+│   │   ├── components/     # React components
+│   │   ├── pages/         # Page components
+│   │   ├── api.js         # API calls
+│   │   └── App.jsx        # Main app component
+│   ├── public/            # Static files
+│   └── package.json       # Frontend dependencies
+└── README.md              # Project documentation
+                        </code></pre>
+                    </div>
+                </section>
+
+                <!-- Backend Explanation -->
+                <section id="backend-explanation" class="mb-8">
+                    <h2 class="text-3xl font-semibold text-white mb-4">Backend Explanation</h2>
+                    <h3 class="text-xl font-semibold text-gray-200">1. Server.js - Entry Point</h3>
+                    <div class="code-block">
+                        <pre><code class="language-javascript">
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const dotenv = require('dotenv');
+
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// Middleware setup
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// MongoDB connection
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.log(err));
+
+// Routes import
+const authRoutes = require('./routes/auth');
+const uploadRoutes = require('./routes/upload');
+const historyRoutes = require('./routes/history');
+
+// Routes usage
+app.use('/api/auth', authRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/history', historyRoutes);
+
+// Server start
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+                        </code></pre>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">2. Database Models</h3>
+                    <h4 class="text-lg font-semibold text-gray-300">User Model (models/User.js)</h4>
+                    <div class="code-block">
+                        <pre><code class="language-javascript">
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+
+const userSchema = new mongoose.Schema({
+  username: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true
+  },
+  password: {
+    type: String,
+    required: true,
+    minlength: 6
+  }
+}, {
+  timestamps: true
+});
+
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 12);
+  next();
+});
+
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
+
+module.exports = mongoose.model('User', userSchema);
+                        </code></pre>
+                    </div>
+                    <h4 class="text-lg font-semibold text-gray-300">File Model (models/File.js)</h4>
+                    <div class="code-block">
+                        <pre><code class="language-javascript">
+const mongoose = require('mongoose');
+
+const fileSchema = new mongoose.Schema({
+  filename: {
+    type: String,
+    required: true
+  },
+  originalName: {
+    type: String,
+    required: true
+  },
+  path: {
+    type: String,
+    required: true
+  },
+  size: {
+    type: Number,
+    required: true
+  },
+  mimetype: {
+    type: String,
+    required: true
+  },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  data: {
+    labels: [String],
+    values: [Number]
+  },
+  chartType: {
+    type: String,
+    default: 'bar'
+  }
+}, {
+  timestamps: true
+});
+
+module.exports = mongoose.model('File', fileSchema);
+                        </code></pre>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">3. API Routes</h3>
+                    <h4 class="text-lg font-semibold text-gray-300">Authentication Routes (routes/auth.js)</h4>
+                    <div class="code-block">
+                        <pre><code class="language-javascript">
+const express = require('express');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+const router = express.Router();
+
+router.post('/register', async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+    
+    const existingUser = await User.findOne({ 
+      $or: [{ email }, { username }] 
+    });
+    
+    if (existingUser) {
+      return res.status(400).json({ 
+        message: 'User already exists' 
+      });
+    }
+    
+    const user = new User({ username, email, password });
+    await user.save();
+    
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    
+    res.status(201).json({
+      message: 'User created successfully',
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+    
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+    
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    
+    res.json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+module.exports = router;
+                        </code></pre>
+                    </div>
+                </section>
+
+                <!-- Frontend Explanation -->
+                <section id="frontend-explanation" class="mb-8">
+                    <h2 class="text-3xl font-semibold text-white mb-4">Frontend Explanation</h2>
+                    <h3 class="text-xl font-semibold text-gray-200">1. Main App Component (App.jsx)</h3>
+                    <div class="code-block">
+                        <pre><code class="language-jsx">
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
+import ChartViewer from './components/ChartViewer/ChartViewer';
+import History from './components/History';
+import Navbar from './components/Navbar';
+
+function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
+    
+    if (token && userData) {
+      setIsAuthenticated(true);
+      setUser(JSON.parse(userData));
+    }
+    setLoading(false);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setIsAuthenticated(false);
+    setUser(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="loading-screen bg-gray-800 text-white">
+        <div className="spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  return (
+    <Router>
+      <div className="App bg-gray-800 text-white min-h-screen">
+        {isAuthenticated && (
+          <Navbar user={user} onLogout={handleLogout} />
+        )}
+        
+        <Routes>
+          <Route 
+            path="/login" 
+            element={
+              !isAuthenticated ? 
+              <Login setIsAuthenticated={setIsAuthenticated} setUser={setUser} /> : 
+              <Navigate to="/dashboard" />
+            } 
+          />
+          <Route 
+            path="/register" 
+            element={
+              !isAuthenticated ? 
+              <Register /> : 
+              <Navigate to="/dashboard" />
+            } 
+          />
+          <Route 
+            path="/dashboard" 
+            element={
+              isAuthenticated ? 
+              <Dashboard /> : 
+              <Navigate to="/login" />
+            } 
+          />
+          <Route 
+            path="/charts" 
+            element={
+              isAuthenticated ? 
+              <ChartViewer /> : 
+              <Navigate to="/login" />
+            } 
+          />
+          <Route 
+            path="/history" 
+            element={
+              isAuthenticated ? 
+              <History /> : 
+              <Navigate to="/login" />
+            } 
+          />
+          <Route 
+            path="/" 
+            element={
+              <Navigate to={isAuthenticated ? "/dashboard" : "/login"} />
+            } 
+          />
+        </Routes>
+      </div>
+    </Router>
+  );
+}
+
+export default App;
+                        </code></pre>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">2. Chart Viewer Component (ChartViewer.jsx)</h3>
+                    <div class="code-block">
+                        <pre><code class="language-jsx">
+import React, { useState, useEffect } from 'react';
+import ChartRenderer from './ChartRenderer';
+import ChartSelector from './ChartSelector';
+import { uploadFile } from '../../api';
+
+const ChartViewer = () => {
+  const [chartType, setChartType] = useState('bar');
+  const [uploadedData, setUploadedData] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [xCol, setXCol] = useState('');
+  const [yCol, setYCol] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const sampleData = {
+    labels: ['January', 'February', 'March', 'April', 'May'],
+    datasets: [{
+      label: 'Sample Data',
+      data: [65, 59, 80, 81, 56],
+      backgroundColor: [
+        'rgba(255, 99, 132, 0.8)',
+        'rgba(54, 162, 235, 0.8)',
+        'rgba(255, 205, 86, 0.8)',
+        'rgba(75, 192, 192, 0.8)',
+        'rgba(153, 102, 255, 0.8)'
+      ],
+      borderColor: [
+        'rgba(255, 99, 132, 1)',
+        'rgba(54, 162, 235, 1)',
+        'rgba(255, 205, 86, 1)',
+        'rgba(75, 192, 192, 1)',
+        'rgba(153, 102, 255, 1)'
+      ],
+      borderWidth: 2
+    }]
+  };
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const allowedTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel'
+    ];
+    
+    if (!allowedTypes.includes(file.type)) {
+      setError('Please select a valid Excel file (.xlsx or .xls)');
+      return;
+    }
+
+    setSelectedFile(file);
+    setLoading(true);
+    setError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const token = localStorage.getItem('token');
+      const response = await uploadFile(formData, token);
+      
+      if (response.data) {
+        setUploadedData(response.data);
+        
+        const columns = Object.keys(response.data[0] || {});
+        if (columns.length >= 2) {
+          setXCol(columns[0]);
+          setYCol(columns[1]);
+        }
+      }
+    } catch (err) {
+      setError('Failed to upload file. Please try again.');
+      console.error('Upload error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const prepareChartData = () => {
+    if (!uploadedData || !xCol || !yCol) {
+      return sampleData;
+    }
+
+    const labels = uploadedData.map(row => row[xCol]?.toString() || '');
+    const data = uploadedData.map(row => {
+      const value = parseFloat(row[yCol]);
+      return isNaN(value) ? 0 : value;
+    });
+
+    return {
+      labels,
+      datasets: [{
+        label: `${yCol} vs ${xCol}`,
+        data,
+        backgroundColor: chartType === 'pie' ? [
+          'rgba(255, 99, 132, 0.8)',
+          'rgba(54, 162, 235, 0.8)',
+          'rgba(255, 205, 86, 0.8)',
+          'rgba(75, 192, 192, 0.8)',
+          'rgba(153, 102, 255, 0.8)',
+          'rgba(255, 159, 64, 0.8)'
+        ] : 'rgba(79, 140, 255, 0.8)',
+        borderColor: 'rgba(79, 140, 255, 1)',
+        borderWidth: 2,
+        tension: chartType === 'line' ? 0.4 : 0
+      }]
+    };
+  };
+
+  const handleDownloadChart = () => {
+    const canvas = document.querySelector('.chart-render-area canvas');
+    if (canvas) {
+      const url = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `chart-${chartType}-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  return (
+    <div className="chart-viewer bg-gray-900 text-white p-4">
+      <div className="chart-controls">
+        <div className="upload-section">
+          <h3 className="text-lg font-bold">Upload Excel File</h3>
+          <input 
+            type="file" 
+            accept=".xlsx,.xls"
+            onChange={handleFileUpload}
+            disabled={loading}
+            className="text-gray-300 bg-gray-800 border border-gray-600 rounded p-2"
+          />
+          {loading && <p className="text-blue-400">Uploading...</p>}
+          {error && <p className="text-red-400">{error}</p>}
+        </div>
+
+        <ChartSelector 
+          chartType={chartType} 
+          setChartType={setChartType} 
+        />
+
+        {uploadedData && (
+          <div className="column-selectors flex gap-4">
+            <div>
+              <label className="text-gray-300">X-Axis Column:</label>
+              <select 
+                value={xCol} 
+                onChange={(e) => setXCol(e.target.value)}
+                className="bg-gray-800 text-gray-300 border border-gray-600 rounded p-2"
+              >
+                <option value="">Select column</option>
+                {Object.keys(uploadedData[0] || {}).map(col => (
+                  <option key={col} value={col}>{col}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-gray-300">Y-Axis Column:</label>
+              <select 
+                value={yCol} 
+                onChange={(e) => setYCol(e.target.value)}
+                className="bg-gray-800 text-gray-300 border border-gray-600 rounded p-2"
+              >
+                <option value="">Select column</option>
+                {Object.keys(uploadedData[0] || {}).map(col => (
+                  <option key={col} value={col}>{col}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
+        <button 
+          className="download-btn bg-blue-600 text-white rounded p-2 mt-4 hover:bg-blue-700"
+          onClick={handleDownloadChart}
+        >
+          Download Chart
+        </button>
+      </div>
+
+      <div className="chart-render-area">
+        <ChartRenderer 
+          type={chartType} 
+          data={prepareChartData()} 
+        />
+      </div>
+    </div>
+  );
+};
+
+export default ChartViewer;
+                        </code></pre>
+                    </div>
+                </section>
+
+                <!-- Features -->
+                <section id="features" class="mb-8">
+                    <h2 class="text-3xl font-semibold text-white mb-4">Features</h2>
+                    <h3 class="text-xl font-semibold text-gray-200">1. User Authentication</h3>
+                    <ul class="list-disc list-inside text-gray-300 space-y-1">
+                        <li>Registration: New users can create accounts</li>
+                        <li>Login: Existing users can log in</li>
+                        <li>JWT Tokens: For secure authentication</li>
+                        <li>Password Hashing: Secure password storage using bcrypt</li>
+                    </ul>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">2. File Upload</h3>
+                    <ul class="list-disc list-inside text-gray-300 space-y-1">
+                        <li>Excel Support: Supports .xlsx and .xls files</li>
+                        <li>File Validation: Validates file type and size</li>
+                        <li>Data Parsing: Converts Excel data to JSON format</li>
+                        <li>Error Handling: Provides proper error messages for upload issues</li>
+                    </ul>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">3. Chart Generation</h3>
+                    <ul class="list-disc list-inside text-gray-300 space-y-1">
+                        <li>Bar Chart</li>
+                        <li>Line Chart</li>
+                        <li>Pie Chart</li>
+                        <li>Doughnut Chart</li>
+                        <li>3D Charts</li>
+                        <li>Radar Chart</li>
+                        <li>Scatter Plot</li>
+                        <li>Bubble Chart</li>
+                    </ul>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">4. Chart Customization</h3>
+                    <ul class="list-disc list-inside text-gray-300 space-y-1">
+                        <li>Column Selection: Select columns for X and Y axes</li>
+                        <li>Color Themes: Various color schemes</li>
+                        <li>Responsive Design: Works on both mobile and desktop</li>
+                        <li>3D Effects: Enhanced visual effects for 3D charts</li>
+                    </ul>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">5. Download Functionality</h3>
+                    <ul class="list-disc list-inside text-gray-300 space-y-1">
+                        <li>Individual Charts: Download single charts in PNG format</li>
+                        <li>Multiple Charts: Download all chart types for a file in PDF format</li>
+                        <li>High Quality: High-resolution images</li>
+                        <li>Custom Naming: Automatic filename generation</li>
+                    </ul>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">6. History Management</h3>
+                    <ul class="list-disc list-inside text-gray-300 space-y-1">
+                        <li>Upload History: Tracks all uploaded files</li>
+                        <li>Search Functionality: Search files</li>
+                        <li>Sort Options: Sort by date, filename, or chart type</li>
+                        <li>Delete Files: Delete unwanted files</li>
+                    </ul>
+                </section>
+
+                <!-- Code Explanation -->
+                <section id="code-explanation" class="mb-8">
+                    <h2 class="text-3xl font-semibold text-white mb-4">Code Explanation</h2>
+                    <h3 class="text-xl font-semibold text-gray-200">1. Chart Renderer Component</h3>
+                    <div class="code-block">
+                        <pre><code class="language-jsx">
+import React from 'react';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  RadialLinearScale,
+  Filler
+} from 'chart.js';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  RadialLinearScale,
+  Filler
+);
+
+import { Bar, Line, Pie, Doughnut, Radar, PolarArea, Scatter, Bubble } from 'react-chartjs-2';
+
+const chartMap = {
+  bar: Bar,
+  line: Line,
+  pie: Pie,
+  doughnut: Doughnut,
+  radar: Radar,
+  polarArea: PolarArea,
+  scatter: Scatter,
+  bubble: Bubble,
+  bar3d: Bar,
+  line3d: Line,
+  pie3d: Pie
+};
+
+const create3DEffect = (data, type) => {
+  if (!type.includes('3d')) return data;
+
+  const enhancedData = { ...data };
+  
+  enhancedData.datasets = enhancedData.datasets.map(dataset => {
+    const enhanced = { ...dataset };
+    
+    if (type === 'bar3d') {
+      enhanced.backgroundColor = Array.isArray(dataset.backgroundColor) 
+        ? dataset.backgroundColor.map(color => color.replace('0.8', '0.9'))
+        : 'rgba(79, 140, 255, 0.9)';
+      enhanced.borderWidth = 4;
+      enhanced.borderColor = '#fff';
+      enhanced.borderRadius = 8;
+      enhanced.borderSkipped = false;
+      enhanced.shadowOffsetX = 3;
+      enhanced.shadowOffsetY = 3;
+      enhanced.shadowBlur = 10;
+      enhanced.shadowColor = 'rgba(0, 0, 0, 0.3)';
+    }
+    
+    else if (type === 'line3d') {
+      enhanced.borderWidth = 4;
+      enhanced.pointRadius = 6;
+      enhanced.pointHoverRadius = 10;
+      enhanced.tension = 0.4;
+      enhanced.fill = true;
+      enhanced.backgroundColor = 'rgba(79, 140, 255, 0.3)';
+      enhanced.borderColor = 'rgba(79, 140, 255, 1)';
+      enhanced.pointBackgroundColor = '#fff';
+      enhanced.pointBorderColor = 'rgba(79, 140, 255, 1)';
+      enhanced.pointBorderWidth = 3;
+    }
+    
+    else if (type === 'pie3d') {
+      enhanced.borderWidth = 4;
+      enhanced.borderColor = '#fff';
+      enhanced.hoverBorderWidth = 6;
+      enhanced.hoverOffset = 15;
+      enhanced.backgroundColor = [
+        'rgba(79, 140, 255, 0.9)',
+        'rgba(118, 75, 162, 0.9)',
+        'rgba(255, 179, 71, 0.9)',
+        'rgba(255, 105, 97, 0.9)',
+        'rgba(119, 221, 119, 0.9)',
+        'rgba(244, 154, 194, 0.9)'
+      ];
+    }
+    
+    return enhanced;
+  });
+  
+  return enhancedData;
+};
+
+const get3DOptions = (type) => {
+  const baseOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      intersect: false,
+      mode: 'index'
+    },
+    animation: {
+      duration: 1000,
+      easing: 'easeInOutQuart'
+    }
+  };
+  
+  if (type.includes('3d')) {
+    baseOptions.plugins = {
+      legend: {
+        display: true,
+        position: 'top',
+        labels: {
+          color: '#fff',
+          font: {
+            size: 14,
+            weight: 'bold'
+          },
+          padding: 20,
+          usePointStyle: true
+        }
+      },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        borderColor: 'rgba(79, 140, 255, 1)',
+        borderWidth: 2,
+        cornerRadius: 8,
+        displayColors: true
+      }
+    };
+    
+    if (['bar3d', 'line3d'].includes(type)) {
+      baseOptions.scales = {
+        x: {
+          grid: {
+            color: 'rgba(255, 255, 255, 0.1)',
+            lineWidth: 1
+          },
+          ticks: {
+            color: '#fff',
+            font: {
+              size: 12,
+              weight: '500'
+            }
+          }
+        },
+        y: {
+          grid: {
+            color: 'rgba(255, 255, 255, 0.1)',
+            lineWidth: 1
+          },
+          ticks: {
+            color: '#fff',
+            font: {
+              size: 12,
+              weight: '500'
+            }
+          }
+        }
+      };
+    }
+  }
+  
+  return baseOptions;
+};
+
+const ChartRenderer = ({ type, data, options = {} }) => {
+  const ChartComponent = chartMap[type] || chartMap.bar;
+  const enhancedData = create3DEffect(data, type);
+  const finalOptions = {
+    ...get3DOptions(type),
+    ...options
+  };
+  
+  return (
+    <div className="chart-container bg-gray-900 p-4 rounded">
+      <ChartComponent 
+        data={enhancedData} 
+        options={finalOptions} 
+      />
+    </div>
+  );
+};
+
+export default ChartRenderer;
+                        </code></pre>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">2. API Integration</h3>
+                    <div class="code-block">
+                        <pre><code class="language-javascript">
+const API_BASE_URL = 'http://localhost:5000/api';
+
+const apiCall = async (endpoint, options = {}) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      ...options
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('API call failed:', error);
+    throw error;
+  }
+};
+
+export const login = async (credentials) => {
+  return apiCall('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(credentials)
+  });
+};
+
+export const register = async (userData) => {
+  return apiCall('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(userData)
+  });
+};
+
+export const uploadFile = async (formData, token) => {
+  return fetch(`${API_BASE_URL}/upload`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    },
+    body: formData
+  }).then(response => {
+    if (!response.ok) {
+      throw new Error('Upload failed');
+    }
+    return response.json();
+  });
+};
+
+export const fetchHistory = async (token) => {
+  return apiCall('/history', {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+};
+
+export const deleteFile = async (fileId, token) => {
+  return apiCall(`/history/${fileId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+};
+
+export const downloadFile = async (fileId, token) => {
+  return fetch(`${API_BASE_URL}/download/${fileId}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  }).then(response => {
+    if (!response.ok) {
+      throw new Error('Download failed');
+    }
+    return response.blob();
+  });
+};
+                        </code></pre>
+                    </div>
+                </section>
+
+                <!-- Troubleshooting -->
+                <section id="troubleshooting" class="mb-8">
+                    <h2 class="text-3xl font-semibold text-white mb-4">Troubleshooting</h2>
+                    <h3 class="text-xl font-semibold text-gray-200">Common Issues</h3>
+                    <ol class="list-decimal list-inside text-gray-300 space-y-4">
+                        <li><strong>MongoDB Connection Error</strong><br>
+                            Problem: MongoNetworkError: failed to connect to server<br>
+                            Solution:
+                            <div class="code-block">
+                                <pre><code class="language-bash">
+# Start MongoDB service
+# Windows:
+net start MongoDB
+
+# macOS/Linux:
+sudo systemctl start mongod
+
+# Or use MongoDB Atlas connection string
+MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/database
+                                </code></pre>
+                            </div>
+                        </li>
+                        <li><strong>CORS Error</strong><br>
+                            Problem: Access to fetch blocked by CORS policy<br>
+                            Solution:
+                            <div class="code-block">
+                                <pre><code class="language-javascript">
+const cors = require('cors');
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true
+}));
+                                </code></pre>
+                            </div>
+                        </li>
+                        <li><strong>File Upload Error</strong><br>
+                            Problem: Excel file upload fails<br>
+                            Solution:
+                            <ul class="list-disc list-inside text-gray-300 space-y-1">
+                                <li>Check file size (max 10MB)</li>
+                                <li>Verify file format (.xlsx or .xls)</li>
+                                <li>Ensure multer is properly configured on the server</li>
+                            </ul>
+                        </li>
+                        <li><strong>Chart Not Rendering</strong><br>
+                            Problem: Charts do not display<br>
+                            Solution:
+                            <div class="code-block">
+                                <pre><code class="language-javascript">
+import { Chart as ChartJS } from 'chart.js';
+ChartJS.register(/* all required components */);
+
+const canvas = document.querySelector('canvas');
+if (canvas) {
+  // Render chart
+}
+                                </code></pre>
+                            </div>
+                        </li>
+                        <li><strong>JWT Token Expiry</strong><br>
+                            Problem: User is automatically logged out<br>
+                            Solution:
+                            <div class="code-block">
+                                <pre><code class="language-javascript">
+const isTokenExpired = (token) => {
+  try {
+    const decoded = jwt.decode(token);
+    return decoded.exp < Date.now() / 1000;
+  } catch {
+    return true;
+  }
+};
+
+if (isTokenExpired(token)) {
+  window.location.href = '/login';
+}
+                                </code></pre>
+                            </div>
+                        </li>
+                    </ol>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">Performance Issues</h3>
+                    <ol class="list-decimal list-inside text-gray-300 space-y-4">
+                        <li><strong>Large File Upload</strong><br>
+                            Problem: Large Excel files take time to upload<br>
+                            Solution:
+                            <ul class="list-disc list-inside text-gray-300 space-y-1">
+                                <li>Set file size limit</li>
+                                <li>Add progress bar</li>
+                                <li>Implement chunked upload</li>
+                            </ul>
+                        </li>
+                        <li><strong>Chart Rendering Slow</strong><br>
+                            Problem: Charts take time to render<br>
+                            Solution:
+                            <div class="code-block">
+                                <pre><code class="language-javascript">
+const options = {
+  animation: false,
+  responsive: true,
+  maintainAspectRatio: false
+};
+
+const sampleData = data.length > 1000 
+  ? data.filter((_, index) => index % 10 === 0) 
+  : data;
+                                </code></pre>
+                            </div>
+                        </li>
+                    </ol>
+                </section>
+
+                <!-- Future Enhancements -->
+                <section id="future-enhancements" class="mb-8">
+                    <h2 class="text-3xl font-semibold text-white mb-4">Future Enhancements</h2>
+                    <h3 class="text-xl font-semibold text-gray-200">1. Advanced Features</h3>
+                    <h4 class="text-lg font-semibold text-gray-300">Google OAuth Integration</h4>
+                    <div class="code-block">
+                        <pre><code class="language-jsx">
+import { GoogleLogin } from '@react-oauth/google';
+
+const GoogleAuthButton = () => {
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      const response = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: credentialResponse.credential })
+      });
+      
+      const data = await response.json();
+      localStorage.setItem('token', data.token);
+      setIsAuthenticated(true);
+    } catch (error) {
+      console.error('Google login failed:', error);
+    }
+  };
+
+  return (
+    <GoogleLogin
+      onSuccess={handleGoogleSuccess}
+      onError={() => console.log('Login Failed')}
+    />
+  );
+};
+                        </code></pre>
+                    </div>
+                    <h4 class="text-lg font-semibold text-gray-300 mt-4">Email-based Login</h4>
+                    <div class="code-block">
+                        <pre><code class="language-jsx">
+const validateEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+const LoginForm = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateEmail(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+    
+    try {
+      const response = await login({ email, password });
+    } catch (error) {
+      setError('Invalid email or password');
+    }
+  };
+  
+  return (
+    <div className="bg-gray-800 p-4 rounded">
+      <input 
+        type="email" 
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Enter your email"
+        required
+        className="bg-gray-700 text-gray-300 border border-gray-600 rounded p-2 mb-2"
+      />
+      <input 
+        type="password" 
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="Enter your password"
+        required
+        className="bg-gray-700 text-gray-300 border border-gray-600 rounded p-2 mb-2"
+      />
+      <button 
+        type="submit" 
+        className="bg-blue-600 text-white rounded p-2 hover:bg-blue-700"
+      >
+        Login
+      </button>
+    </div>
+  );
+};
+                        </code></pre>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">2. UI/UX Improvements</h3>
+                    <h4 class="text-lg font-semibold text-gray-300">Dark Theme Implementation</h4>
+                    <div class="code-block">
+                        <pre><code class="language-css">
+/* styles.css */
+body {
+  background-color: #374151; /* Dark gray */
+  color: #ffffff;
+}
+
+.chart-viewer, .App, .loading-screen {
+  background-color: #374151;
+}
+
+input, select, button {
+  background-color: #374151;
+  color: #d1d5db;
+  border: 1px solid #4b5563;
+}
+
+button:hover {
+  background-color: #4b5563;
+}
+
+/* Code block styling similar to VS Code */
+pre, code {
+  background-color: #000000 !important;
+  color: #e5e7eb !important;
+  font-family: 'Fira Code', monospace;
+}
+
+/* Syntax highlighting */
+.token.keyword { color: #ff79c6; }
+.token.function { color: #50fa7b; }
+.token.string { color: #f1fa8c; }
+.token.comment { color: #6272a4; }
+.token.number { color: #bd93f9; }
+                        </code></pre>
+                    </div>
+                    <h4 class="text-lg font-semibold text-gray-300 mt-4">Responsive Design Improvements</h4>
+                    <div class="code-block">
+                        <pre><code class="language-css">
+.chart-viewer {
+  padding: 1rem;
+  height: 100vh;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .chart-viewer {
+    padding: 2rem;
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .chart-viewer {
+    padding: 3rem;
+  }
+}
+                        </code></pre>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">3. Advanced Chart Features</h3>
+                    <h4 class="text-lg font-semibold text-gray-300">Real-time Data Updates</h4>
+                    <div class="code-block">
+                        <pre><code class="language-jsx">
+const useRealTimeData = (fileId) => {
+  const [data, setData] = useState(null);
+  
+  useEffect(() => {
+    const ws = new WebSocket(`ws://localhost:5000/realtime/${fileId}`);
+    
+    ws.onmessage = (event) => {
+      const newData = JSON.parse(event.data);
+      setData(newData);
+    };
+    
+    return () => ws.close();
+  }, [fileId]);
+  
+  return data;
+};
+                        </code></pre>
+                    </div>
+                    <h4 class="text-lg font-semibold text-gray-300 mt-4">Chart Animations</h4>
+                    <div class="code-block">
+                        <pre><code class="language-javascript">
+const animationOptions = {
+  animation: {
+    duration: 2000,
+    easing: 'easeInOutQuart',
+    onComplete: () => {
+      console.log('Chart animation completed');
+    },
+    onProgress: (animation) => {
+      console.log(`Animation progress: ${animation.currentStep}/${animation.numSteps}`);
+    }
+  },
+  transitions: {
+    active: {
+      animation: {
+        duration: 400
+      }
+    }
+  }
+};
+                        </code></pre>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">4. Data Processing Enhancements</h3>
+                    <h4 class="text-lg font-semibold text-gray-300">Advanced Excel Parsing</h4>
+                    <div class="code-block">
+                        <pre><code class="language-javascript">
+const parseExcelFile = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const workbook = XLSX.read(e.target.result, { type: 'binary' });
+        const sheets = {};
+        
+        workbook.SheetNames.forEach(sheetName => {
+          const worksheet = workbook.Sheets[sheetName];
+          sheets[sheetName] = XLSX.utils.sheet_to_json(worksheet);
+        });
+        
+        resolve(sheets);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    
+    reader.readAsBinaryString(file);
+  });
+};
+                        </code></pre>
+                    </div>
+                    <h4 class="text-lg font-semibold text-gray-300 mt-4">Data Validation and Cleaning</h4>
+                    <div class="code-block">
+                        <pre><code class="language-javascript">
+const cleanData = (rawData) => {
+  return rawData
+    .filter(row => Object.values(row).some(value => value !== null && value !== ''))
+    .map(row => {
+      const cleanedRow = {};
+      
+      Object.keys(row).forEach(key => {
+        let value = row[key];
+        
+        if (typeof value === 'string' && !isNaN(value) && value.trim() !== '') {
+          value = parseFloat(value);
+        }
+        
+        if (typeof value === 'string' && isValidDate(value)) {
+          value = new Date(value);
+        }
+        
+        cleanedRow[key] = value;
+      });
+      
+      return cleanedRow;
+    });
+};
+
+const isValidDate = (dateString) => {
+  return !isNaN(Date.parse(dateString));
+};
+                        </code></pre>
+                    </div>
+                </section>
+
+                <!-- Conclusion -->
+                <section id="conclusion" class="mb-8">
+                    <h2 class="text-3xl font-semibold text-white mb-4">Conclusion</h2>
+                    <p>This Excel Vision project provides a comprehensive solution for data visualization. It combines modern web technologies to create an intuitive and feature-rich application with a dark gray theme and colorful, VS Code-style syntax highlighting for code blocks.</p>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">Key Takeaways:</h3>
+                    <ul class="list-disc list-inside text-gray-300 space-y-1">
+                        <li>Full-Stack Development: Utilizes the complete MERN stack</li>
+                        <li>Real-World Application: Designed for practical use cases</li>
+                        <li>Scalable Architecture: Ready for future enhancements</li>
+                        <li>User-Friendly Interface: Easy-to-use and responsive design</li>
+                        <li>Security: JWT authentication and data validation</li>
+                    </ul>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">Learning Outcomes:</h3>
+                    <ul class="list-disc list-inside text-gray-300 space-y-1">
+                        <li>Backend Development: Node.js, Express.js, MongoDB</li>
+                        <li>Frontend Development: React.js, Chart.js, responsive design</li>
+                        <li>File Handling: Excel file parsing and processing</li>
+                        <li>Authentication: JWT tokens and security best practices</li>
+                        <li>API Development: RESTful APIs and error handling</li>
+                        <li>Data Visualization: Various chart types and customization</li>
+                    </ul>
+                    <h3 class="text-xl font-semibold text-gray-200 mt-4">Next Steps:</h3>
+                    <ul class="list-disc list-inside text-gray-300 space-y-1">
+                        <li>Deploy the Application: Deploy on Heroku, Netlify, or AWS</li>
+                        <li>Add More Features: Real-time updates, advanced charts</li>
+                        <li>Optimize Performance: Caching, lazy loading</li>
+                        <li>Testing: Add unit tests and integration tests</li>
+                        <li>Documentation: Create API documentation and user guides</li>
+                    </ul>
+                    <p class="mt-4">Happy Coding! 🚀<br>This guide will help you understand and extend the Excel Vision project. Feel free to ask if you have any questions!</p>
+                </section>
+            </div>
+
+            <!-- Scrollspy Navigation -->
+            <div class="lg:w-1/4">
+                <div class="scrollspy bg-gray-800 p-4 rounded-lg">
+                    <h3 class="text-xl font-semibold text-white mb-4">Navigation</h3>
+                    <ul class="table-of-contents text-gray-300 space-y-2">
+                        <li><a href="#project-overview" class="hover:text-blue-400">Project Overview</a></li>
+                        <li><a href="#prerequisites" class="hover:text-blue-400">Prerequisites</a></li>
+                        <li><a href="#installation-guide" class="hover:text-blue-400">Installation Guide</a></li>
+                        <li><a href="#project-structure" class="hover:text-blue-400">Project Structure</a></li>
+                        <li><a href="#backend-explanation" class="hover:text-blue-400">Backend Explanation</a></li>
+                        <li><a href="#frontend-explanation" class="hover:text-blue-400">Frontend Explanation</a></li>
+                        <li><a href="#features" class="hover:text-blue-400">Features</a></li>
+                        <li><a href="#code-explanation" class="hover:text-blue-400">Code Explanation</a></li>
+                        <li><a href="#troubleshooting" class="hover:text-blue-400">Troubleshooting</a></li>
+                        <li><a href="#future-enhancements" class="hover:text-blue-400">Future Enhancements</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple scrollspy implementation
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('section[id]');
+            const navLinks = document.querySelectorAll('.table-of-contents a');
+
+            window.addEventListener('scroll', () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (scrollY >= sectionTop - 60) {
+                        current = section.getAttribute('id');
+                    }
+                });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('text-blue-400');
+                    if (link.getAttribute('href').substring(1) === current) {
+                        link.classList.add('text-blue-400');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
